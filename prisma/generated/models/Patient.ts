@@ -261,7 +261,6 @@ export type PatientOrderByWithRelationInput = {
 
 export type PatientWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  clinicId_mobile?: Prisma.PatientClinicIdMobileCompoundUniqueInput
   AND?: Prisma.PatientWhereInput | Prisma.PatientWhereInput[]
   OR?: Prisma.PatientWhereInput[]
   NOT?: Prisma.PatientWhereInput | Prisma.PatientWhereInput[]
@@ -275,7 +274,7 @@ export type PatientWhereUniqueInput = Prisma.AtLeast<{
   clinic?: Prisma.XOR<Prisma.ClinicScalarRelationFilter, Prisma.ClinicWhereInput>
   appointments?: Prisma.AppointmentListRelationFilter
   consultations?: Prisma.ConsultationListRelationFilter
-}, "id" | "clinicId_mobile">
+}, "id">
 
 export type PatientOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -399,11 +398,6 @@ export type PatientListRelationFilter = {
 
 export type PatientOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type PatientClinicIdMobileCompoundUniqueInput = {
-  clinicId: string
-  mobile: string
 }
 
 export type PatientCountOrderByAggregateInput = {

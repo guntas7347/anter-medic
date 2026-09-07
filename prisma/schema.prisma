@@ -55,7 +55,8 @@ model Patient {
   appointments  Appointment[]
   consultations Consultation[]
 
-  @@unique([clinicId, mobile])
+  @@index([clinicId])
+  @@index([mobile])
 }
 
 model Appointment {

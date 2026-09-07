@@ -166,12 +166,14 @@ export async function bookPublicAppointment(data: {
     }
   }
 
-  // Find or create patient
-  let patient = await prisma.patient.findUnique({
+  // Find patient matching clinic, mobile, and patient name
+  let patient = await prisma.patient.findFirst({
     where: {
-      clinicId_mobile: {
-        clinicId,
-        mobile: cleanMobile,
+      clinicId,
+      mobile: cleanMobile,
+      name: {
+        equals: name.trim(),
+        mode: "insensitive",
       },
     },
   });
@@ -187,11 +189,10 @@ export async function bookPublicAppointment(data: {
       },
     });
   } else {
-    // Update existing patient info
+    // Update existing patient info (age/gender) without altering name identity
     patient = await prisma.patient.update({
       where: { id: patient.id },
       data: {
-        name: name.trim(),
         age: Number(age),
         gender,
       },

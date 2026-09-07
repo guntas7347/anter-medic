@@ -84,19 +84,6 @@ export async function createPatient(data: {
     return { error: "Please enter a valid 10-digit mobile number." };
   }
 
-  const existing = await prisma.patient.findUnique({
-    where: {
-      clinicId_mobile: {
-        clinicId,
-        mobile: cleanMobile,
-      },
-    },
-  });
-
-  if (existing) {
-    return { success: true, patient: existing };
-  }
-
   const patient = await prisma.patient.create({
     data: {
       clinicId,
