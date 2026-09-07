@@ -2,6 +2,8 @@ import { PublicHeader } from "@/components/PublicHeader";
 import { getPublicClinicData } from "@/lib/actions";
 import { BookingClient } from "./BookingClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function BookPage() {
   const { doctors } = await getPublicClinicData();
 

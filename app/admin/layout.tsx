@@ -1,6 +1,8 @@
 import { getAuthSession } from "@/lib/actions";
 import { AdminNav } from "@/components/AdminNav";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminLayout({
   children,
 }: {
@@ -19,9 +21,7 @@ export default async function AdminLayout({
         doctorName={session.doctor.name}
         clinicName={session.clinic?.name}
       />
-      <div className="flex-1 pb-20 sm:pb-24">
-        {children}
-      </div>
+      <div className="flex-1 pb-20 sm:pb-24">{children}</div>
     </div>
   );
 }

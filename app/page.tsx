@@ -3,6 +3,8 @@ import { PublicHeader } from "@/components/PublicHeader";
 import { getPublicClinicData } from "@/lib/actions";
 import { MapPin, Phone, Clock, ArrowRight, UserCheck } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const { clinic, doctors } = await getPublicClinicData();
 
@@ -79,7 +81,10 @@ export default async function HomePage() {
 
           <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
             <Phone className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
-            <a href={`tel:${clinic.phone}`} className="hover:underline font-medium">
+            <a
+              href={`tel:${clinic.phone}`}
+              className="hover:underline font-medium"
+            >
               {clinic.phone}
             </a>
           </div>
