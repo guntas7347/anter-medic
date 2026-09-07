@@ -4,11 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "@/hooks/useForm";
-import {
-  createPatient,
-  getPatients,
-  deleteAppointment,
-} from "@/lib/actions";
+import { createPatient, getPatients, deleteAppointment } from "@/lib/actions";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -76,7 +72,8 @@ export function AppointmentsClient({
   const [doctorId, setDoctorId] = useState(selectedDoctorId || "ALL");
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>("ALL");
   const [showWalkinModal, setShowWalkinModal] = useState(false);
-  const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentItem | null>(null);
+  const [appointmentToDelete, setAppointmentToDelete] =
+    useState<AppointmentItem | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Walkin patient search & creation state
@@ -144,25 +141,16 @@ export function AppointmentsClient({
     });
   };
 
-  const handleDeleteAppointment = () => {
-    if (!appointmentToDelete) return;
-    startTransition(async () => {
-      await deleteAppointment(appointmentToDelete.id);
-      setAppointmentToDelete(null);
-      router.refresh();
-    });
-  };
-
   // Status Filter counts
   const totalCount = initialAppointments.length;
   const scheduledCount = initialAppointments.filter(
-    (a) => a.status === "SCHEDULED" || a.status === "CONFIRMED"
+    (a) => a.status === "SCHEDULED" || a.status === "CONFIRMED",
   ).length;
   const consultedCount = initialAppointments.filter(
-    (a) => a.status === "CONSULTED"
+    (a) => a.status === "CONSULTED",
   ).length;
   const cancelledCount = initialAppointments.filter(
-    (a) => a.status === "CANCELLED" || a.status === "NO_SHOW"
+    (a) => a.status === "CANCELLED" || a.status === "NO_SHOW",
   ).length;
 
   const filteredAppointments = initialAppointments.filter((a) => {
@@ -365,7 +353,8 @@ export function AppointmentsClient({
             <div className="py-12 px-4 text-center rounded-2xl bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800">
               <CalendarIcon className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                No {statusFilter !== "ALL" ? statusFilter.toLowerCase() : ""} appointments found for this date.
+                No {statusFilter !== "ALL" ? statusFilter.toLowerCase() : ""}{" "}
+                appointments found for this date.
               </p>
               <p className="text-xs text-slate-400 mt-0.5">
                 Appointments matching your filter will appear here.
@@ -411,73 +400,11 @@ export function AppointmentsClient({
                     </p>
                   </div>
                 </Link>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {getStatusBadge(appt.status)}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setAppointmentToDelete(appt);
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
-                    title="Delete Appointment"
-                    aria-label="Delete Appointment"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  <Link href={`/admin/appointments/${appt.id}`}>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
-                </div>
               </div>
             ))
           )}
         </section>
       </main>
-
-      {/* Delete Appointment Confirmation Modal */}
-      {appointmentToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="max-w-sm w-full p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col gap-4">
-            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
-              <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-950/60 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                  Delete Appointment?
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Delete appointment for {appointmentToDelete.patient.name}?
-                </p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              This appointment record will be permanently deleted.
-            </p>
-
-            <div className="flex gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => setAppointmentToDelete(null)}
-                className="flex-1 py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteAppointment}
-                disabled={isPending}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold flex items-center justify-center"
-              >
-                {isPending ? "Deleting..." : "Yes, Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Walk-in Consultation Modal */}
       {showWalkinModal && (
