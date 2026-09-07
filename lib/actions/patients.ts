@@ -110,3 +110,41 @@ export async function createPatient(data: {
   revalidatePath("/admin/patients");
   return { success: true, patient };
 }
+
+export async function deletePatient(patientId: string) {
+  const auth = await requireAuth();
+  const clinicId = auth.doctor.clinicId;
+
+  const patient = await prisma.patient.findFirst({
+    where: {
+      id: patientId,
+      clinicId,
+    },
+  });
+
+  if (!patient) {
+    return { error: "Patient not found or unauthorized." };
+  }
+
+  // Delete all consultations, appointments, and patient in transaction
+  await prisma.$transaction([
+    prisma.consultation.deleteMany({
+      where: { patientId, clinicId },
+    }),
+    prisma.appointment.deleteMany({
+      where: { patientId, clinicId },
+    }),
+    prisma.patient.delete({
+      where: { id: patientId, clinicId },
+    }),
+  ]);
+
+  revalidatePath("/admin/patients");
+  revalidatePath("/admin/appointments");
+  revalidatePath("/admin/consultations");
+
+  return {
+    success: true,
+    message: "Patient and all related appointments & consultation history have been deleted.",
+  };
+}

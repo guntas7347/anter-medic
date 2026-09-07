@@ -4,7 +4,11 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "@/hooks/useForm";
-import { createPatient, getPatients } from "@/lib/actions";
+import {
+  createPatient,
+  getPatients,
+  deleteAppointment,
+} from "@/lib/actions";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -12,11 +16,12 @@ import {
   Plus,
   Search,
   ChevronRight,
-  Filter,
   CheckCircle2,
   XCircle,
   AlertCircle,
   X,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 
 interface AppointmentItem {
@@ -56,6 +61,8 @@ interface AppointmentsClientProps {
   selectedDoctorId: string;
 }
 
+type StatusFilterType = "ALL" | "SCHEDULED" | "CONSULTED" | "CANCELLED";
+
 export function AppointmentsClient({
   initialAppointments,
   doctors,
@@ -67,7 +74,9 @@ export function AppointmentsClient({
   const router = useRouter();
   const [date, setDate] = useState(selectedDate);
   const [doctorId, setDoctorId] = useState(selectedDoctorId || "ALL");
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>("ALL");
   const [showWalkinModal, setShowWalkinModal] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentItem | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Walkin patient search & creation state
@@ -76,7 +85,11 @@ export function AppointmentsClient({
   const [searching, setSearching] = useState(false);
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
 
-  const { values: newPatient, handleChange: handlePatientChange, resetForm: resetPatientForm } = useForm({
+  const {
+    values: newPatient,
+    handleChange: handlePatientChange,
+    resetForm: resetPatientForm,
+  } = useForm({
     name: "",
     age: "",
     gender: "Male",
@@ -130,6 +143,37 @@ export function AppointmentsClient({
       }
     });
   };
+
+  const handleDeleteAppointment = () => {
+    if (!appointmentToDelete) return;
+    startTransition(async () => {
+      await deleteAppointment(appointmentToDelete.id);
+      setAppointmentToDelete(null);
+      router.refresh();
+    });
+  };
+
+  // Status Filter counts
+  const totalCount = initialAppointments.length;
+  const scheduledCount = initialAppointments.filter(
+    (a) => a.status === "SCHEDULED" || a.status === "CONFIRMED"
+  ).length;
+  const consultedCount = initialAppointments.filter(
+    (a) => a.status === "CONSULTED"
+  ).length;
+  const cancelledCount = initialAppointments.filter(
+    (a) => a.status === "CANCELLED" || a.status === "NO_SHOW"
+  ).length;
+
+  const filteredAppointments = initialAppointments.filter((a) => {
+    if (statusFilter === "ALL") return true;
+    if (statusFilter === "SCHEDULED")
+      return a.status === "SCHEDULED" || a.status === "CONFIRMED";
+    if (statusFilter === "CONSULTED") return a.status === "CONSULTED";
+    if (statusFilter === "CANCELLED")
+      return a.status === "CANCELLED" || a.status === "NO_SHOW";
+    return true;
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -214,7 +258,7 @@ export function AppointmentsClient({
           </div>
 
           {/* Doctor Filter Tabs */}
-          <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800/80 overflow-x-auto">
+          <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800/80 overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => handleDoctorChange("ALL")}
@@ -243,32 +287,100 @@ export function AppointmentsClient({
           </div>
         </div>
 
+        {/* Status Filter Tabs (ALL / SCHEDULED / CONSULTED / CANCELLED) */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-200/80 dark:bg-slate-800/80 overflow-x-auto scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setStatusFilter("ALL")}
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap transition-all ${
+              statusFilter === "ALL"
+                ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }`}
+          >
+            <span>All</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800">
+              {totalCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatusFilter("SCHEDULED")}
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap transition-all ${
+              statusFilter === "SCHEDULED"
+                ? "bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-300 shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }`}
+          >
+            <span>Scheduled</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800">
+              {scheduledCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatusFilter("CONSULTED")}
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap transition-all ${
+              statusFilter === "CONSULTED"
+                ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Consulted</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300">
+              {consultedCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatusFilter("CANCELLED")}
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap transition-all ${
+              statusFilter === "CANCELLED"
+                ? "bg-white dark:bg-slate-900 text-red-700 dark:text-red-300 shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }`}
+          >
+            <span>Cancelled</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800">
+              {cancelledCount}
+            </span>
+          </button>
+        </div>
+
         {/* Appointments List */}
         <section className="flex flex-col gap-2.5">
           <div className="flex justify-between items-center px-1">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Schedule ({initialAppointments.length})
+              {statusFilter === "ALL"
+                ? `Appointments (${filteredAppointments.length})`
+                : `${statusFilter.charAt(0) + statusFilter.slice(1).toLowerCase()} (${filteredAppointments.length})`}
             </h2>
           </div>
 
-          {initialAppointments.length === 0 ? (
+          {filteredAppointments.length === 0 ? (
             <div className="py-12 px-4 text-center rounded-2xl bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800">
               <CalendarIcon className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                No appointments for this date.
+                No {statusFilter !== "ALL" ? statusFilter.toLowerCase() : ""} appointments found for this date.
               </p>
               <p className="text-xs text-slate-400 mt-0.5">
-                Booked appointments will appear here automatically.
+                Appointments matching your filter will appear here.
               </p>
             </div>
           ) : (
-            initialAppointments.map((appt) => (
-              <Link
+            filteredAppointments.map((appt) => (
+              <div
                 key={appt.id}
-                href={`/admin/appointments/${appt.id}`}
                 className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-teal-500 dark:hover:border-teal-500 transition-all flex items-center justify-between gap-3 shadow-2xs group"
               >
-                <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                <Link
+                  href={`/admin/appointments/${appt.id}`}
+                  className="flex items-start gap-3.5 flex-1 min-w-0"
+                >
                   {/* Time Badge */}
                   <div className="w-14 shrink-0 text-center py-1.5 px-1 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
                     <span className="font-bold text-xs text-slate-900 dark:text-white block leading-tight">
@@ -298,17 +410,74 @@ export function AppointmentsClient({
                       {appt.problem}
                     </p>
                   </div>
-                </div>
+                </Link>
 
                 <div className="flex items-center gap-2 shrink-0">
                   {getStatusBadge(appt.status)}
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAppointmentToDelete(appt);
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
+                    title="Delete Appointment"
+                    aria-label="Delete Appointment"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <Link href={`/admin/appointments/${appt.id}`}>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
                 </div>
-              </Link>
+              </div>
             ))
           )}
         </section>
       </main>
+
+      {/* Delete Appointment Confirmation Modal */}
+      {appointmentToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="max-w-sm w-full p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col gap-4">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+              <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-950/60 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+                  Delete Appointment?
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Delete appointment for {appointmentToDelete.patient.name}?
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              This appointment record will be permanently deleted.
+            </p>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setAppointmentToDelete(null)}
+                className="flex-1 py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAppointment}
+                disabled={isPending}
+                className="flex-1 py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold flex items-center justify-center"
+              >
+                {isPending ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Walk-in Consultation Modal */}
       {showWalkinModal && (
@@ -349,53 +518,51 @@ export function AppointmentsClient({
                 {/* Search Results */}
                 <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
                   {searching ? (
-                    <p className="text-center py-3 text-xs text-slate-400">Searching...</p>
+                    <div className="py-4 text-center text-xs text-slate-400">
+                      Searching...
+                    </div>
                   ) : searchResults.length > 0 ? (
                     searchResults.map((p) => (
-                      <button
-                        type="button"
+                      <Link
                         key={p.id}
-                        onClick={() => {
-                          setShowWalkinModal(false);
-                          router.push(`/admin/consult/new?patientId=${p.id}`);
-                        }}
-                        className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-teal-500 bg-slate-50/50 dark:bg-slate-800/40 text-left flex justify-between items-center transition-colors"
+                        href={`/admin/consult/new?patientId=${p.id}`}
+                        onClick={() => setShowWalkinModal(false)}
+                        className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-teal-500 hover:bg-teal-50/50 dark:hover:bg-teal-950/30 flex items-center justify-between transition-colors"
                       >
                         <div>
-                          <p className="font-semibold text-xs text-slate-900 dark:text-white">
+                          <div className="font-bold text-xs text-slate-900 dark:text-white">
                             {p.name}
-                          </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            {p.age}y • {p.gender} • {p.mobile}
-                          </p>
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-mono">
+                            {p.mobile} • {p.age}y
+                          </div>
                         </div>
-                        <span className="text-xs font-semibold text-teal-600 dark:text-teal-400">
-                          Select →
-                        </span>
-                      </button>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </Link>
                     ))
                   ) : patientSearch.trim().length > 0 ? (
-                    <div className="text-center py-3 text-xs text-slate-400">
-                      No matching patient found.
+                    <div className="py-4 text-center text-xs text-slate-400">
+                      No patients found. Create a new patient below.
                     </div>
                   ) : null}
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                  <span className="text-xs text-slate-500">Not in the system?</span>
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => setShowNewPatientForm(true)}
-                    className="py-1.5 px-3 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 text-xs font-semibold flex items-center gap-1"
+                    className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Create New Patient</span>
+                    <Plus className="w-4 h-4" />
+                    <span>Create New Patient Profile</span>
                   </button>
                 </div>
               </div>
             ) : (
-              /* Create Patient Form */
-              <form onSubmit={handleCreateWalkinPatient} className="flex flex-col gap-3">
+              <form
+                onSubmit={handleCreateWalkinPatient}
+                className="flex flex-col gap-3"
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     New Patient Details
@@ -403,45 +570,47 @@ export function AppointmentsClient({
                   <button
                     type="button"
                     onClick={() => setShowNewPatientForm(false)}
-                    className="text-xs text-slate-400 hover:underline"
+                    className="text-xs text-teal-600 dark:text-teal-400 hover:underline"
                   >
-                    Back to search
+                    Back to Search
                   </button>
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-medium text-slate-500 block mb-1">
-                    Patient Name *
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-500">
+                    Full Name
                   </label>
                   <input
                     type="text"
                     name="name"
                     value={newPatient.name}
                     onChange={handlePatientChange}
-                    placeholder="Full name"
+                    placeholder="Patient Name"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
                     required
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[11px] font-medium text-slate-500 block mb-1">
-                      Age *
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-semibold text-slate-500">
+                      Age
                     </label>
                     <input
                       type="number"
                       name="age"
+                      min={0}
+                      max={120}
                       value={newPatient.age}
                       onChange={handlePatientChange}
-                      placeholder="Age"
+                      placeholder="e.g. 35"
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
                       required
                     />
                   </div>
-                  <div>
-                    <label className="text-[11px] font-medium text-slate-500 block mb-1">
-                      Gender *
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-semibold text-slate-500">
+                      Gender
                     </label>
                     <select
                       name="gender"
@@ -456,9 +625,9 @@ export function AppointmentsClient({
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-medium text-slate-500 block mb-1">
-                    Mobile (10 digits) *
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-500">
+                    Mobile Number
                   </label>
                   <input
                     type="tel"
@@ -478,7 +647,9 @@ export function AppointmentsClient({
                   className="mt-2 w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>{isPending ? "Creating..." : "Create & Start Consultation"}</span>
+                  <span>
+                    {isPending ? "Creating..." : "Create & Start Consultation"}
+                  </span>
                 </button>
               </form>
             )}

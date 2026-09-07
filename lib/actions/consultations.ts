@@ -105,3 +105,45 @@ export async function getConsultationById(id: string) {
 
   return consultation;
 }
+
+export async function deleteConsultation(consultationId: string) {
+  const auth = await requireAuth();
+  const clinicId = auth.doctor.clinicId;
+
+  const consultation = await prisma.consultation.findFirst({
+    where: {
+      id: consultationId,
+      clinicId,
+    },
+  });
+
+  if (!consultation) {
+    return { error: "Consultation not found or unauthorized." };
+  }
+
+  // If linked to an appointment, we can reset the appointment status if needed or keep it
+  if (consultation.appointmentId) {
+    await prisma.appointment.updateMany({
+      where: {
+        id: consultation.appointmentId,
+        clinicId,
+      },
+      data: {
+        status: "SCHEDULED",
+      },
+    });
+  }
+
+  await prisma.consultation.delete({
+    where: {
+      id: consultationId,
+    },
+  });
+
+  revalidatePath(`/admin/patients/${consultation.patientId}`);
+  revalidatePath(`/admin/patients`);
+  revalidatePath(`/admin/appointments`);
+
+  return { success: true, message: "Consultation deleted successfully." };
+}
+

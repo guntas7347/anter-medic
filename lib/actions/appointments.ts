@@ -93,3 +93,42 @@ export async function updateAppointmentStatus(
 
   return { success: true };
 }
+
+export async function deleteAppointment(appointmentId: string) {
+  const auth = await requireAuth();
+  const clinicId = auth.doctor.clinicId;
+
+  const appointment = await prisma.appointment.findFirst({
+    where: {
+      id: appointmentId,
+      clinicId,
+    },
+  });
+
+  if (!appointment) {
+    return { error: "Appointment not found or unauthorized." };
+  }
+
+  // Unlink associated consultation if any
+  await prisma.consultation.updateMany({
+    where: {
+      appointmentId,
+      clinicId,
+    },
+    data: {
+      appointmentId: null,
+    },
+  });
+
+  await prisma.appointment.delete({
+    where: {
+      id: appointmentId,
+    },
+  });
+
+  revalidatePath(`/admin/appointments`);
+  revalidatePath(`/admin/patients`);
+  revalidatePath(`/admin/patients/${appointment.patientId}`);
+
+  return { success: true, message: "Appointment deleted successfully." };
+}
