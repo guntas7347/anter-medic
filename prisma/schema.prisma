@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Clinic {
+  id            String         @id @default(cuid())
+  name          String
+  address       String
+  phone         String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  doctors       Doctor[]
+  patients      Patient[]
+  appointments  Appointment[]
+  consultations Consultation[]
+}
+
+model Doctor {
+  id             String         @id @default(cuid())
+  clinicId       String
+  name           String
+  qualification  String
+  specialization String
+  phone          String
+  username       String         @unique
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  clinic         Clinic         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  appointments   Appointment[]
+  consultations  Consultation[]
+}
+
+model Patient {
+  id            String         @id @default(cuid())
+  clinicId      String
+  name          String
+  age           Int
+  gender        String
+  mobile        String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  clinic        Clinic         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  appointments  Appointment[]
+  consultations Consultation[]
+
+  @@unique([clinicId, mobile])
+}
+
+model Appointment {
+  id           String        @id @default(cuid())
+  clinicId     String
+  doctorId     String
+  patientId    String
+  date         DateTime
+  startTime    String
+  endTime      String
+  problem      String
+  status       String        @default("SCHEDULED")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctor       Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient      Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  consultation Consultation? @relation("AppointmentConsultation")
+}
+
+model Consultation {
+  id            String       @id @default(cuid())
+  clinicId      String
+  patientId     String
+  doctorId      String
+  appointmentId String?      @unique
+  complaint     String
+  diagnosis     String
+  notes         String?
+  bloodPressure String?
+  temperature   String?
+  weight        String?
+  prescription  String?
+  followUpDate  DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  clinic        Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor        Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointment   Appointment? @relation("AppointmentConsultation", fields: [appointmentId], references: [id], onDelete: SetNull)
+}
